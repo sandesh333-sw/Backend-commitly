@@ -8,8 +8,9 @@ const {Server} = require("socket.io");
 dotenv.config();
 const mainRouter = require("./routes/main.router.js");
 
-const yargs = require("yargs");
-const { hideBin } = require("yargs/helpers");
+// Use dynamic import for ESM modules
+const yargsPromise = import('yargs');
+const helpersPromise = import('yargs/helpers');
 
 const { initRepo } = require("./controllers/init.js");
 const { addRepo } = require("./controllers/add.js");
@@ -18,59 +19,73 @@ const { pushRepo } = require("./controllers/push.js");
 const { pullRepo } = require("./controllers/pull.js");
 const { revertRepo } = require("./controllers/revert.js");
 
-yargs(hideBin(process.argv))
-  .command("start", "Starts a new server", {}, startServer)
-  .command("init", "Initialise a new repository", {}, initRepo)
-
-  .command(
-    "add<file>",
-    "Add a file to repository",
-    (yargs) => {
-      yargs.positional("file", {
-        describe: "File to be added to staging area",
-        type: "string",
-      });
-    },
-    (argv) => {
-      addRepo(argv.file);
-    }
-  )
-
-  .command(
-    "commit <message>",
-    "commit the staged files",
-    (yargs) => {
-      yargs.positional("message", {
-        describe: "Commit message",
-        type: "string",
-      });
-    },
-    (argv) => {
-      commitRepo(argv.message);
-    }
+// Initialize yargs with dynamic imports
+async function initYargs() {
+  try {
+    const { default: yargs } = await yargsPromise;
+    const { hideBin } = await helpersPromise;
     
-  )
+    yargs(hideBin(process.argv))
+      .command("start", "Starts a new server", {}, startServer)
+      .command("init", "Initialise a new repository", {}, initRepo)
+    
+      .command(
+        "add<file>",
+        "Add a file to repository",
+        (yargs) => {
+          yargs.positional("file", {
+            describe: "File to be added to staging area",
+            type: "string",
+          });
+        },
+        (argv) => {
+          addRepo(argv.file);
+        }
+      )
+    
+      .command(
+        "commit <message>",
+        "commit the staged files",
+        (yargs) => {
+          yargs.positional("message", {
+            describe: "Commit message",
+            type: "string",
+          });
+        },
+        (argv) => {
+          commitRepo(argv.message);
+        }
+        
+      )
+    
+      .command("push", "Push commits", {}, pushRepo)
+    
+      .command("pull", "pull commits from repo", {}, pullRepo)
+    
+      .command(
+        "revert",
+        "revert to specific commit",
+        (yargs) => {
+          yargs.positional("commitId", "revert to specific commit", {
+            describe: "Commit id ",
+            type: "string",
+          });
+        },
+        (argv) => {
+          revertRepo(argv.commitID);
+        }
+      )
+    
+      .demandCommand(1, "Please insert at least one command")
+      .help().argv;
+  } catch (error) {
+    console.error("Error initializing yargs:", error);
+    process.exit(1);
+  }
+}
 
-  .command("push", "Push commits", {}, pushRepo)
-
-  .command("pull", "pull commits from repo", {}, pullRepo)
-
-  .command(
-    "revert",
-    "revert to specific commit",
-    (yargs) => {
-      yargs.positional("commitId", "revert to specific commit", {
-        describe: "Commit id ",
-        type: "string",
-      });
-    },
-    (argv) => {
-      revertRepo(argv.commitID);
-    }
-  )
-
-  .demandCommand(1, "Please insert at least one command")
-  .help().argv;
+// Run the yargs initialization
+initYargs();
 
 async function startServer() {
   const app = express();
