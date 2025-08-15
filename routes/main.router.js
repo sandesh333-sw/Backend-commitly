@@ -6,9 +6,9 @@ const issueRouter = require("./issue.router");
 const mainRouter = express.Router();
 
 // Routers with base paths
-mainRouter.use("/", userRouter);
-mainRouter.use("/", repoRouter);
-mainRouter.use("/", issueRouter);
+mainRouter.use("/user", userRouter);
+mainRouter.use("/repo", repoRouter);
+mainRouter.use("/issue", issueRouter);
 
 // Root route
 mainRouter.get("/", (req, res) => {
